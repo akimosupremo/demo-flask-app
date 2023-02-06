@@ -3,3 +3,4 @@ app/static/dump
 flaskEnv
 venv
 instance
+app/*.sqlite3
