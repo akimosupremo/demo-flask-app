@@ -5,12 +5,14 @@
 #               For now, we simulate a CRUD methodology. No database connection as of yet.
 
 from app import app
-from flask import render_template, request, redirect, url_for
+from flask import render_template, request, redirect, url_for, send_file
 from app.models import Patient, TreatmentPlan, TreatmentMachine, MedicalImage
 import os
 from os import listdir
 import random
 from shutil import copy, rmtree
+import pydicom
+from PIL import Image
 
 # global variables to be used across pages
 patients = []
@@ -201,12 +203,33 @@ def remove_patient(id):
 def view_patient(id):
     global patients # use global list of patients
 
-    patient = [p for p in patients if p.id == id][0] # find patient
+    dicom_dir = BASE_DIR + "/static/dicom"
+    dicom_files = [f for f in os.listdir(dicom_dir) if f.endswith(".dcm")]
+    num_slices = len(dicom_files)
 
-    # Explanation:  Static patient image directories were created (see about in 
-    #               "create" or "edit" routes) to simulate retrieval of images from a "backend."
-    #               Here we simply grab each image to be displayed on frontend
-    image_dir = os.path.join(BASE_DIR, f"static/{patient.id}/images")
-    image_files = [f for f in listdir(image_dir) if os.path.isfile(os.path.join(image_dir, f))]
+    return render_template('view_patient.html', num_slices=num_slices)
 
-    return render_template('view_patient.html', patient=patient, image_files=image_files, enumerate=enumerate)
+# View dicom slice API
+@app.route("/view_ct_slice/<int:slice_index>")
+def view_ct_slice(slice_index):
+    # paths
+    dicom_dir = BASE_DIR + "/static/dicom"
+    output_dir = BASE_DIR + "/static/dump/converted_dicom"
+
+    # create directory for output if it doesn't exist
+    if not os.path.exists(output_dir):
+        os.mkdir(output_dir)
+  
+    # Convert dicom files to PNG
+    dicom_files = [f for f in os.listdir(dicom_dir) if f.endswith(".dcm")]
+    dicom_files.sort()
+    dicom_file = os.path.join(dicom_dir, f"{dicom_files[slice_index]}")
+    dicom_data = pydicom.dcmread(dicom_file, force=True)
+    image = dicom_data.pixel_array
+    image = Image.fromarray(image)
+    if image.mode != 'RGB':
+        image = image.convert('RGB')
+    image.save(f"{output_dir}/slice_{slice_index}.png") # save location
+
+    # return path for display
+    return send_file(f"{output_dir}/slice_{slice_index}.png", mimetype="image/png")
