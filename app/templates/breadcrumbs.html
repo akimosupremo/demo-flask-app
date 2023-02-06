@@ -1,0 +1,29 @@
+<!-- Breadcrumbs for navigation (displayed on every page except home) -->
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+  <a class="navbar-brand" href="#">Radiotherapy Flask Application</a>
+  <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav" aria-controls="navbarNav"
+    aria-expanded="false" aria-label="Toggle navigation">
+    <span class="navbar-toggler-icon"></span>
+  </button>
+  <div class="collapse navbar-collapse" id="navbarNav">
+    <ul class="navbar-nav">
+      <li class="nav-item">
+        <a class="nav-link" href="{{ url_for('home') }}">Home</a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" href="{{ url_for('radiotherapy') }}">About Radiotherapy</a>
+      </li>
+    </ul>
+  </div>
+</nav>
+<nav aria-label="breadcrumb" class="navbar-dark bg-dark sub-nav">
+  <ol class="breadcrumb">
+    {% for link in links %}
+    {% if loop.last %}
+    <li class="breadcrumb-item active" aria-current="page">{{ link[0] }}</li>
+    {% else %}
+    <li class="breadcrumb-item"><a href="{{ link[1] }}">{{ link[0] }}</a></li>
+    {% endif %}
+    {% endfor %}
+  </ol>
+</nav>

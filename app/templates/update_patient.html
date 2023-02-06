@@ -1,0 +1,171 @@
+<!-- "edit.html" -->
+
+{% extends "layout.html" %}
+
+{% block head_title %}Edit Patient{% endblock %}
+{% set crumb_title = "Edit Patient" %}
+
+{% block content %}
+
+<div class="d-flex h-100">
+  <div class="container mt-5">
+    <!-- Page Title -->
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <h1 class="h3 mb-0">Edit Patient</h1>
+    </div>
+    <form method="post">
+      <!-- Patient Info Section -->
+      <div class="card mx-2 mb-5">
+        <div class="card-header bg-primary text-white">
+          <h3 class="card-title">Patient Info</h3>
+        </div>
+        <div class="card-body">
+          <div class="form-group row mb-3">
+            <label for="patient_name" class="col-sm-2 col-form-label">Name</label>
+            <div class="col-sm-7">
+              <input type="text" class="form-control" id="patient_name" name="patient_name"
+                placeholder="Enter patient name" required value="{{ patient.name }}">
+            </div>
+          </div>
+          <div class="form-group row mb-3">
+            <label for="patient_dob" class="col-sm-2 col-form-label">Date of Birth</label>
+            <div class="col-sm-7">
+              <input type="date" class="form-control" id="patient_dob" name="patient_dob" required
+                value="{{ patient.dob }}">
+            </div>
+          </div>
+          <div class="form-group row">
+            <label for="patient_diagnosis" class="col-sm-2 col-form-label">Diagnosis</label>
+            <div class="col-sm-7">
+              <select class="form-control" id="patient_diagnosis" name="patient_diagnosis">
+                <option value="" disabled selected>Select Diagnosis</option>
+                {% for diagnosis in diagnoses %}
+                {% if diagnosis == patient.diagnosis %}
+                <option value="{{ diagnosis }}" selected>{{ diagnosis }}</option>
+                {% else %}
+                <option value="{{ diagnosis }}">{{ diagnosis }}</option>
+                {% endif %}
+                {% endfor %}
+              </select>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Treatment Plan Section -->
+      <div class="card mx-2 mb-5">
+        <div class="card-header bg-primary text-white">
+          <h3 class="card-title">Treatment Plan</h3>
+        </div>
+        <div class="card-body">
+          <div class="treatment-plan-section mb-3">
+            {% for plan in patient.treatment_plans %}
+            <div class="form-group row mb-3">
+              <label for="plan_name" class="col-sm-2 col-form-label">Name</label>
+              <div class="col-sm-7">
+                <input type="text" class="form-control" id="plan_name" name="plan_name[]" value="{{ plan.name }}"
+                  placeholder="Enter plan name" required>
+              </div>
+            </div>
+            <div class="form-group row mb-3">
+              <label for="plan_dose" class="col-sm-2 col-form-label">Dose</label>
+              <div class="col-sm-7">
+                <input type="number" class="form-control" id="plan_dose" name="plan_dose[]" value="{{ plan.dose }}"
+                  required>
+              </div>
+            </div>
+            <div class="form-group row">
+              <label for="plan_fractionation" class="col-sm-2 col-form-label">Fractionation</label>
+              <div class="col-sm-7">
+                <input type="number" class="form-control" id="plan_fractionation" name="plan_fractionation[]"
+                  value="{{ plan.fractionation }}" required>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+          <hr>
+          <button type="button" class="btn btn-primary" id="add-treatment-plan">Add Treatment Plan</button>
+        </div>
+      </div>
+
+      <!-- Treatment Machine Section -->
+      <div class="card mx-2 mb-5">
+        <div class="card-header bg-primary text-white">
+          <h3 class="card-title">Treatment Machine</h3>
+        </div>
+        <div class="card-body">
+          <div class="form-group row mb-3">
+            <label for="machine_name" class="col-sm-2 col-form-label">Name</label>
+            <div class="col-sm-7">
+              <input type="text" class="form-control" id="machine_name" name="machine_name"
+                placeholder="Enter machine name" value="{{ patient.treatment_machine.name }}" required>
+            </div>
+          </div>
+          <div class="form-group row mb-3">
+            <label for="machine_energy" class="col-sm-2 col-form-label">Energy</label>
+            <div class="col-sm-7">
+              <input type="text" class="form-control" id="machine_energy" name="machine_energy" name="patient_dob"
+                placeholder="Enter machine energy" value="{{ patient.treatment_machine.energy }}" required>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Medical Image Section -->
+      <div class="card mx-2 mb-5">
+        <div class="card-header bg-primary text-white">
+          <h3 class="card-title">Medical Images</h3>
+        </div>
+        <div class="card-body">
+          <div class="medical-image-section mb-3">
+            {% for image in patient.medical_images %}
+            <div class="form-group row mb-3">
+              <label for="image_type" class="col-sm-2 col-form-label">Image Type</label>
+              <div class="col-sm-7">
+                <input type="text" class="form-control" id="image_type" name="image_type[]"
+                  placeholder="Enter image type" value="{{ image.image_type }}" required>
+              </div>
+            </div>
+            <div class="form-group row mb-3">
+              <label for="image_date_acquired" class="col-sm-2 col-form-label">Date Acquired</label>
+              <div class="col-sm-7">
+                <input type="date" class="form-control" id="image_date_acquired" name="image_date_acquired[]"
+                  value="{{ image.date_acquired }}" required>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+          <hr>
+          <button type="button" class="btn btn-primary" id="add-medical-image">Add Medical Image</button>
+        </div>
+      </div>
+
+      <!-- Submission -->
+      <div class="mb-4">
+        <button type="submit" class="btn btn-primary">Save changes</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+  $(document).ready(function () {
+    // Duplicates treatment plan section fields upon button click
+    $("#add-treatment-plan").click(function () {
+      let newTreatmentPlanSection = $(".treatment-plan-section").first().clone();
+      newTreatmentPlanSection.find("input").val("");
+      $(".treatment-plan-section").last().after(newTreatmentPlanSection);
+    });
+    // Duplicates medical image section fields upon button click
+    $("#add-medical-image").click(function () {
+      let newMedicalImageSection = $(".medical-image-section").first().clone();
+      newMedicalImageSection.find("input").val("");
+      $(".medical-image-section").last().after(newMedicalImageSection);
+    });
+  });
+</script>
+
+{% endblock %}
