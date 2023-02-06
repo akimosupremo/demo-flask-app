@@ -13,9 +13,10 @@ import random
 from shutil import copy, rmtree
 import pydicom
 from PIL import Image
+from app import db
+from datetime import datetime
 
 # global variables to be used across pages
-patients = []
 diagnoses = ["Breast Cancer", "Lung Cancer",
              "Prostate Cancer", "Colorectal Cancer", "Leukemia"]
 
@@ -25,7 +26,7 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 # Home page
 @app.route('/')
 def home():
-    global patients
+    patients = Patient.query.all()
     return render_template('home.html', patients=patients)
 
 # Basic "About radiotherapy" page
@@ -42,7 +43,7 @@ def create_patient():
 
         # get all form fields
         patient_name = request.form["patient_name"]
-        patient_dob = request.form["patient_dob"]
+        patient_dob = datetime.strptime(request.form["patient_dob"], '%Y-%m-%d')
         patient_diagnosis = request.form["patient_diagnosis"]
         treatment_plan_names = request.form.getlist("plan_name[]")
         treatment_plan_doses = request.form.getlist("plan_dose[]")
@@ -52,59 +53,25 @@ def create_patient():
         medical_image_types = request.form.getlist("image_type[]")
         medical_image_dates = request.form.getlist("image_date_acquired[]")
 
+        patient = Patient(name=patient_name, date_of_birth=patient_dob, diagnosis=patient_diagnosis)
+        db.session.add(patient)
+        db.session.commit()
+
         # Create treatment plan objects
-        treatment_plans = []
         for i in range(len(treatment_plan_names)):
-            treatment_plan = TreatmentPlan(
-                treatment_plan_names[i],
-                treatment_plan_doses[i],
-                treatment_plan_fractions[i]
-            )
-            treatment_plans.append(treatment_plan)
+            treatment_plan = TreatmentPlan(patient_id=patient.id, name=treatment_plan_names[i], dose=treatment_plan_doses[i], fractionation=treatment_plan_fractions[i])
+            db.session.add(treatment_plan)
 
         # Create medical image objects
-        medical_images = []
         for i in range(len(medical_image_types)):
-            medical_image = MedicalImage(
-                medical_image_types[i],
-                medical_image_dates[i]
-            )
-            medical_images.append(medical_image)
+            medical_image = MedicalImage(patient_id=patient.id, type=medical_image_types[i], date_acquired=datetime.strptime(medical_image_dates[i], '%Y-%m-%d'))
+            db.session.add(medical_image)
 
         # Create treatment machine object
-        treatment_machine = TreatmentMachine(machine_name, machine_energy)
+        treatment_machine = TreatmentMachine(patient_id=patient.id, name=machine_name, energy=machine_energy)
+        db.session.add(treatment_machine)
 
-        # Create patient object
-        patient = Patient(patient_name, patient_dob, patient_diagnosis,
-                          treatment_plans, treatment_machine, medical_images)
-        
-        # Assigning id to simply follow the size of the patient list
-        patient.id = len(patients) + 1
-
-        patients.append(patient) # add patient object to global list
-
-        # Explanation:  Here we are simulating the retrieval of patient images.
-        #               Essentially, we grab random files from sample_images folder and 
-        #               put them in a subdirectory in the static/ folder where the 
-        #               subdirectory name is just the patient id.
-        #               To be used on the "view patient" page.
-        patient_dir = os.path.join(BASE_DIR, f"static/{patient.id}")
-        patient_images_dir = os.path.join(patient_dir, "images")
-
-        # If patient's directory already exists, remove its contents
-        if os.path.exists(patient_dir):
-            rmtree(patient_dir)
-        os.mkdir(patient_dir)  # create subfolder for patient
-        os.mkdir(patient_images_dir)  # create images subfolder
-
-        # copy random image to patient's images folder
-        for i in range(len(medical_images)):
-            src_path = random.choice(os.listdir(
-                os.path.join(BASE_DIR, "static/sample_images")))
-            src_path = os.path.join(
-                BASE_DIR, f"static/sample_images/{src_path}")
-            dst_path = patient_images_dir
-            copy(src_path, dst_path)
+        db.session.commit()
 
         return redirect(url_for("home")) # go back home on submission
     return render_template("create_patient.html", diagnoses=diagnoses)
@@ -112,102 +79,96 @@ def create_patient():
 # Update/Edit Patient page
 @app.route('/edit_patient/<int:id>', methods=['GET', 'POST'])
 def edit_patient(id):
-    global patients # use global list of patients
+    patient = Patient.query.get(id)
+    # Get the existing treatment plans for this patient
+    existing_plans = TreatmentPlan.query.filter_by(patient_id=id).all()
+    existing_plan_ids = [plan.id for plan in existing_plans]
 
-    patient = [p for p in patients if p.id == id][0] # find patient
+    treatment_machine = TreatmentMachine.query.filter_by(patient_id=id).first()
+
+    # Get the existing treatment plans for this patient
+    existing_images = MedicalImage.query.filter_by(patient_id=id).all()
+    existing_image_ids = [image.id for image in existing_images]
 
     # submit button clicked
     if request.method == 'POST':
 
         # get all form fields and update each patient object parameter
         patient.name = request.form['patient_name']
-        patient.dob = request.form['patient_dob']
+        patient.date_of_birth = datetime.strptime(request.form['patient_dob'], '%Y-%m-%d')
         patient.diagnosis = request.form['patient_diagnosis']
-
+        db.session.commit()
         
         treatment_plan_names = request.form.getlist("plan_name[]")
         treatment_plan_doses = request.form.getlist("plan_dose[]")
         treatment_plan_fractions = request.form.getlist("plan_fractionation[]")
 
-        # Create treatment plan objects and overwrite old treatment plan info
-        patient.treatment_plans = []
-        for i in range(len(treatment_plan_names)):
-            treatment_plan = TreatmentPlan(
-                treatment_plan_names[i],
-                treatment_plan_doses[i],
-                treatment_plan_fractions[i]
+        # Update existing plans
+        for i, plan in enumerate(existing_plans):
+            plan.plan_name = treatment_plan_names[i]
+            plan.dose = treatment_plan_doses[i]
+            plan.fractionation = treatment_plan_fractions[i]
+     
+         # Add new plans
+        for i in range(len(existing_plans), len(treatment_plan_names)):
+            new_plan = TreatmentPlan(
+                name=treatment_plan_names[i], dose=treatment_plan_doses[i], fractionation=treatment_plan_fractions[i], patient_id=patient.id
             )
-            patient.treatment_plans.append(treatment_plan)
+            db.session.add(new_plan)
 
-        # Overwrite treatment machine
-        patient.treatment_machine = TreatmentMachine(
-            request.form['machine_name'],
-            request.form['machine_energy']
-        )
+        # Remove plans that were deleted from the form
+        for plan in existing_plans:
+            if plan.id not in existing_plan_ids:
+                db.session.delete(plan)
+        
+        # Update the treatment machine information
+        treatment_machine.name = request.form.get("machine_name")
+        treatment_machine.energy = request.form.get("machine_energy")
 
         # Create medical image objects and overwrite old image info
         medical_image_types = request.form.getlist("image_type[]")
         medical_image_dates = request.form.getlist("image_date_acquired[]")
 
-        patient.medical_images = []
-        for i in range(len(medical_image_types)):
-            medical_image = MedicalImage(
-                medical_image_types[i],
-                medical_image_dates[i]
+        # Update existing images
+        for i, image in enumerate(existing_images):
+            image.type = medical_image_types[i]
+            image.date_acquired = datetime.strptime(medical_image_dates[i], '%Y-%m-%d')
+     
+         # Add new images
+        for i in range(len(existing_images), len(medical_image_types)):
+            new_image = MedicalImage(
+                type=medical_image_types[i], date_acquired=datetime.strptime(medical_image_dates[i], '%Y-%m-%d'), patient_id=patient.id
             )
-            patient.medical_images.append(medical_image)
+            db.session.add(new_image)
 
-        # Explanation:  Here we are simulating the retrieval of patient images.
-        #               Essentially, we grab random files from sample_images folder and 
-        #               put them in a subdirectory in the static/ folder where the 
-        #               subdirectory name is just the patient id.
-        #               To be used on the "view patient" page.
-        patient_dir = os.path.join(BASE_DIR, f"static/{patient.id}")
-        patient_images_dir = os.path.join(patient_dir, "images")
+        # Remove plans that were deleted from the form
+        for image in existing_images:
+            if image.id not in existing_image_ids:
+                db.session.delete(image)
 
-        # If patient's directory already exists, remove its contents
-        if os.path.exists(patient_dir):
-            rmtree(patient_dir)
-        os.mkdir(patient_dir)  # create subfolder for patient
-        os.mkdir(patient_images_dir)  # create images subfolder
-
-        # copy random image to patient's images folder
-        for i in range(len(patient.medical_images)):
-            src_path = random.choice(os.listdir(
-                os.path.join(BASE_DIR, "static/sample_images")))
-            src_path = os.path.join(
-                BASE_DIR, f"static/sample_images/{src_path}")
-            dst_path = patient_images_dir
-            copy(src_path, dst_path)
-
+        db.session.commit()
         return redirect(url_for('home')) # redirect home after submission
-    return render_template('update_patient.html', patient=patient, diagnoses=diagnoses)
+    return render_template('update_patient.html', patient=patient, diagnoses=diagnoses, treatment_plans=existing_plans, treatment_machine=treatment_machine, medical_images=existing_images)
 
 # Remove patient API
 @app.route("/remove_patient/<int:id>")
 def remove_patient(id):
-    global patients # use global list of patients
-
-    # splice patient from list
-    patients = [patient for patient in patients if patient.id != id]
-
-    # remove any patient images by deleting folder 
-    patient_dir = os.path.join(BASE_DIR, f"static/{id}")
-    if os.path.exists(patient_dir):
-        rmtree(patient_dir)
+    patient = Patient.query.get(id)
+    db.session.delete(patient)
+    db.session.commit()
 
     return redirect(url_for("home"))
 
 # View Patient page
 @app.route('/view_patient/<int:id>')
 def view_patient(id):
-    global patients # use global list of patients
+    patient = Patient.query.get(id)
 
     dicom_dir = BASE_DIR + "/static/dicom"
     dicom_files = [f for f in os.listdir(dicom_dir) if f.endswith(".dcm")]
     num_slices = len(dicom_files)
 
-    return render_template('view_patient.html', num_slices=num_slices)
+    return render_template('view_patient.html', patient=patient, num_slices=num_slices)
 
 # View dicom slice API
 @app.route("/view_ct_slice/<int:slice_index>")

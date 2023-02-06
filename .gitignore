@@ -2,3 +2,4 @@ app/__pycache__
 app/static/dump
 flaskEnv
 venv
+instance

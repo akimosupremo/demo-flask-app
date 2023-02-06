@@ -31,7 +31,7 @@
             <label for="patient_dob" class="col-sm-2 col-form-label">Date of Birth</label>
             <div class="col-sm-7">
               <input type="date" class="form-control" id="patient_dob" name="patient_dob" required
-                value="{{ patient.dob }}">
+                value="{{ patient.date_of_birth }}">
             </div>
           </div>
           <div class="form-group row">
@@ -59,7 +59,8 @@
         </div>
         <div class="card-body">
           <div class="treatment-plan-section mb-3">
-            {% for plan in patient.treatment_plans %}
+            {% for plan in treatment_plans %}
+            <div class="mb-3">
             <div class="form-group row mb-3">
               <label for="plan_name" class="col-sm-2 col-form-label">Name</label>
               <div class="col-sm-7">
@@ -81,6 +82,7 @@
                   value="{{ plan.fractionation }}" required>
               </div>
             </div>
+            </div>
             {% endfor %}
           </div>
           <hr>
@@ -98,14 +100,14 @@
             <label for="machine_name" class="col-sm-2 col-form-label">Name</label>
             <div class="col-sm-7">
               <input type="text" class="form-control" id="machine_name" name="machine_name"
-                placeholder="Enter machine name" value="{{ patient.treatment_machine.name }}" required>
+                placeholder="Enter machine name" value="{{ treatment_machine.name }}" required>
             </div>
           </div>
           <div class="form-group row mb-3">
             <label for="machine_energy" class="col-sm-2 col-form-label">Energy</label>
             <div class="col-sm-7">
               <input type="text" class="form-control" id="machine_energy" name="machine_energy" name="patient_dob"
-                placeholder="Enter machine energy" value="{{ patient.treatment_machine.energy }}" required>
+                placeholder="Enter machine energy" value="{{ treatment_machine.energy }}" required>
             </div>
           </div>
         </div>
@@ -118,12 +120,12 @@
         </div>
         <div class="card-body">
           <div class="medical-image-section mb-3">
-            {% for image in patient.medical_images %}
+            {% for image in medical_images %}
             <div class="form-group row mb-3">
               <label for="image_type" class="col-sm-2 col-form-label">Image Type</label>
               <div class="col-sm-7">
                 <input type="text" class="form-control" id="image_type" name="image_type[]"
-                  placeholder="Enter image type" value="{{ image.image_type }}" required>
+                  placeholder="Enter image type" value="{{ image.type }}" required>
               </div>
             </div>
             <div class="form-group row mb-3">
