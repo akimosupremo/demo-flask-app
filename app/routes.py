@@ -2,15 +2,13 @@
 #
 # Description:  Main routing definitions and data logic for each API (route).
 #               Most routes return a rendered template to be displayed on the frontend.
-#               For now, we simulate a CRUD methodology. No database connection as of yet.
+#               We implement a CRUD methodology using Flask-SQLAlchemy for ORM db management
+#               and pydicom for DICOM manipulations
 
 from app import app
 from flask import render_template, request, redirect, url_for, send_file
 from app.models import Patient, TreatmentPlan, TreatmentMachine, MedicalImage
 import os
-from os import listdir
-import random
-from shutil import copy, rmtree
 import pydicom
 from PIL import Image
 from app import db
@@ -26,7 +24,7 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 # Home page
 @app.route('/')
 def home():
-    patients = Patient.query.all()
+    patients = Patient.query.all() # ORM
     return render_template('home.html', patients=patients)
 
 # Basic "About radiotherapy" page
@@ -55,7 +53,7 @@ def create_patient():
 
         patient = Patient(name=patient_name, date_of_birth=patient_dob, diagnosis=patient_diagnosis)
         db.session.add(patient)
-        db.session.commit()
+        db.session.commit() # save changes to allow retrieval of patient id
 
         # Create treatment plan objects
         for i in range(len(treatment_plan_names)):
@@ -146,13 +144,14 @@ def edit_patient(id):
             if image.id not in existing_image_ids:
                 db.session.delete(image)
 
-        db.session.commit()
+        db.session.commit() # save all changes
         return redirect(url_for('home')) # redirect home after submission
     return render_template('update_patient.html', patient=patient, diagnoses=diagnoses, treatment_plans=existing_plans, treatment_machine=treatment_machine, medical_images=existing_images)
 
 # Remove patient API
 @app.route("/remove_patient/<int:id>")
 def remove_patient(id):
+    # use ORM to commit deletion from db
     patient = Patient.query.get(id)
     db.session.delete(patient)
     db.session.commit()
@@ -164,6 +163,7 @@ def remove_patient(id):
 def view_patient(id):
     patient = Patient.query.get(id)
 
+    # get the number of dicom files
     dicom_dir = BASE_DIR + "/static/dicom"
     dicom_files = [f for f in os.listdir(dicom_dir) if f.endswith(".dcm")]
     num_slices = len(dicom_files)
@@ -177,15 +177,14 @@ def view_ct_slice(slice_index):
     dicom_dir = BASE_DIR + "/static/dicom"
     output_dir = BASE_DIR + "/static/dump/converted_dicom"
 
-    # create directory for output if it doesn't exist
-    if not os.path.exists(output_dir):
-        os.mkdir(output_dir)
+    # create directory for output and don't complain if it exists
+    os.mkdirs(output_dir, exist_ok=True)
   
     # Convert dicom files to PNG
     dicom_files = [f for f in os.listdir(dicom_dir) if f.endswith(".dcm")]
     dicom_files.sort()
     dicom_file = os.path.join(dicom_dir, f"{dicom_files[slice_index]}")
-    dicom_data = pydicom.dcmread(dicom_file, force=True)
+    dicom_data = pydicom.dcmread(dicom_file)
     image = dicom_data.pixel_array
     image = Image.fromarray(image)
     if image.mode != 'RGB':

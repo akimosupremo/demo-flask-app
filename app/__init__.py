@@ -13,6 +13,8 @@ basedir = os.path.abspath(os.path.dirname(__file__))
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(basedir, 'demo-flask-app.sqlite3')
 
+# a dictionary to define names for various db metadata
+# e.g. primary key (pk), foreign key (fk)
 naming_convention = {
     "ix": 'ix_%(column_0_label)s',
     "uq": "uq_%(table_name)s_%(column_0_name)s",
