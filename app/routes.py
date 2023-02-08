@@ -178,7 +178,7 @@ def view_ct_slice(slice_index):
     output_dir = BASE_DIR + "/static/dump/converted_dicom"
 
     # create directory for output and don't complain if it exists
-    os.mkdirs(output_dir, exist_ok=True)
+    os.makedirs(output_dir, exist_ok=True)
   
     # Convert dicom files to PNG
     dicom_files = [f for f in os.listdir(dicom_dir) if f.endswith(".dcm")]
