@@ -37,7 +37,7 @@
               <select class="form-control" id="patient_diagnosis" name="patient_diagnosis">
                 <option value="" disabled selected>Select Diagnosis</option>
                 {% for diagnosis in diagnoses %}
-                <option value="{{ diagnosis }}">{{ diagnosis }}</option>
+                <option value="{{ diagnosis.name }}">{{ diagnosis.name }}</option>
                 {% endfor %}
               </select>
             </div>

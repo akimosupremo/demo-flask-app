@@ -40,10 +40,10 @@
               <select class="form-control" id="patient_diagnosis" name="patient_diagnosis">
                 <option value="" disabled selected>Select Diagnosis</option>
                 {% for diagnosis in diagnoses %}
-                {% if diagnosis == patient.diagnosis %}
-                <option value="{{ diagnosis }}" selected>{{ diagnosis }}</option>
+                {% if diagnosis.name == patient.diagnosis %}
+                <option value="{{ diagnosis.name }}" selected>{{ diagnosis.name }}</option>
                 {% else %}
-                <option value="{{ diagnosis }}">{{ diagnosis }}</option>
+                <option value="{{ diagnosis.name }}">{{ diagnosis.name }}</option>
                 {% endif %}
                 {% endfor %}
               </select>
